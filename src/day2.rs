@@ -5,7 +5,8 @@ use std::num::ParseIntError;
 /// OPCODE_ELEMENTS_NUMBER represents the number of elements to define an opcode.
 const OPCODE_ELEMENTS_NUMBER: usize = 4;
 const PART2_MISTERY_OUTPUT: i32 = 19690720;
-
+const MAX_NOUN_VALUE: i32 = 99;
+const MAX_VERB_VALUE: i32 = 99;
 
 enum Operation {
     Add,
@@ -77,16 +78,16 @@ fn intcode_program(mut input: Vec<i32>, noun: i32, verb: i32) -> Vec<i32> {
 #[aoc(day2, part1)]
 pub fn part1(input: &[i32]) -> String {
     let mut result: Vec<i32> = Vec::from(input);
-    let result = intcode_program(result, 12, 2);
+    result = intcode_program(result, 12, 2);
     return format!("{:?}", result);
 }
 
 #[aoc(day2, part2)]
 pub fn part2(input: &[i32]) -> String {
     let mut noun = 0;
-    while noun <= 99 {
-        let mut verb = 0;
-        while verb <= 99 {
+    let mut verb = 0;
+    while noun <= MAX_NOUN_VALUE {
+        while verb <= MAX_VERB_VALUE {
             let mut result: Vec<i32> = Vec::from(input);
             result = intcode_program(result, noun, verb);
             if result[0] == PART2_MISTERY_OUTPUT {
@@ -95,6 +96,7 @@ pub fn part2(input: &[i32]) -> String {
             verb += 1;
         }
         noun += 1;
+        verb = 0;
     }
     return String::from("ERROR");
 }
