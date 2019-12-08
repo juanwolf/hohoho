@@ -187,9 +187,9 @@ pub fn part2(panel: &Panel) -> u32 {
             .iter()
             .position(|&p| p == intersection)
             .unwrap();
-        let wires_length = (wire1_length + wire1_length) as u32;
+        let wires_length = (wire1_length + wire2_length) as u32;
         if shortest_length > wires_length {
-            shortest_length = wires_length
+            shortest_length = wires_length;
         }
     }
     return shortest_length;
