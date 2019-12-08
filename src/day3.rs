@@ -172,6 +172,29 @@ pub fn part1(panel: &Panel) -> u32 {
     return shortest_manhattan_distance;
 }
 
+#[aoc(day3, part2)]
+pub fn part2(panel: &Panel) -> u32 {
+    let intersection_points = panel.get_intersection_points();
+    let mut shortest_length: u32 = u32::max_value();
+    for intersection in intersection_points {
+        let wire1_length = panel.wires[0]
+            .path
+            .iter()
+            .position(|&p| p == intersection)
+            .unwrap();
+        let wire2_length = panel.wires[1]
+            .path
+            .iter()
+            .position(|&p| p == intersection)
+            .unwrap();
+        let wires_length = (wire1_length + wire1_length) as u32;
+        if shortest_length > wires_length {
+            shortest_length = wires_length
+        }
+    }
+    return shortest_length;
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -278,5 +301,29 @@ mod tests {
         );
         let panel = input.unwrap();
         assert_eq!(part1(&panel), 135);
+    }
+
+    #[test]
+    fn test_part2_example() {
+        let input = parse_input_day3("R8,U5,L5,D3\nU7,R6,D4,L4");
+        let panel = input.unwrap();
+        assert_eq!(part2(&panel), 30);
+    }
+
+    #[test]
+    fn test_part2_input1() {
+        let input =
+            parse_input_day3("R75,D30,R83,U83,L12,D49,R71,U7,L72\nU62,R66,U55,R34,D71,R55,D58,R83");
+
+        let panel = input.unwrap();
+        assert_eq!(part2(&panel), 610);
+    }
+    #[test]
+    fn test_part2_input2() {
+        let input = parse_input_day3(
+            "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51\nU98,R91,D20,R16,D67,R40,U7,R15,U6,R7",
+        );
+        let panel = input.unwrap();
+        assert_eq!(part2(&panel), 410);
     }
 }
