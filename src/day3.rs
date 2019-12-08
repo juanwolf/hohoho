@@ -2,6 +2,7 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use std::num::ParseIntError;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum Direction {
     Up,
     Down,
@@ -21,6 +22,19 @@ impl From<char> for Direction {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Position {
+    x: i32,
+    y: i32,
+}
+
+impl Position {
+    fn manhattan_distance(&self, position: Position) -> i32 {
+        (position.x - self.x) + (position.y - self.y)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Move {
     direction: Direction,
     length: i32,
@@ -39,34 +53,36 @@ impl From<String> for Move {
 }
 
 impl Move {
-    fn execute_from(&self, position: Position) -> Position {
-        match self.direction {
-            Direction::Up => Position {
-                x: position.x + self.length,
-                y: position.y,
-            },
-            Direction::Down => Position {
-                x: position.x - self.length,
-                y: position.y,
-            },
-            Direction::Right => Position {
-                x: position.x,
-                y: position.y + self.length,
-            },
-            Direction::Left => Position {
-                x: position.x,
-                y: position.y - self.length,
-            },
+    fn execute_from(&self, position: Position) -> Vec<Position> {
+        let mut res: Vec<Position> = vec![];
+        let mut i = 0;
+        while i <= self.length {
+            let new_position = match self.direction {
+                Direction::Up => Position {
+                    x: position.x,
+                    y: position.y + i,
+                },
+                Direction::Down => Position {
+                    x: position.x,
+                    y: position.y - i,
+                },
+                Direction::Right => Position {
+                    x: position.x + i,
+                    y: position.y,
+                },
+                Direction::Left => Position {
+                    x: position.x - i,
+                    y: position.y,
+                },
+            };
+            res.push(new_position);
+            i += 1;
         }
+        return res;
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Position {
-    x: i32,
-    y: i32,
-}
-
+#[derive(Debug, PartialEq, Eq)]
 struct Wire {
     path: Vec<Position>,
 }
@@ -82,8 +98,8 @@ impl From<Vec<Move>> for Wire {
                 Some(p) => p,
                 None => panic!("NO ELEMENT IN Vector"),
             };
-            let new_position = moves[i].execute_from(last_position.clone());
-            path.append(&mut vec![last_position, new_position]);
+            let mut new_positions: Vec<Position> = moves[i].execute_from(last_position.clone());
+            path.append(&mut new_positions);
 
             i += 1;
         }
@@ -91,9 +107,24 @@ impl From<Vec<Move>> for Wire {
     }
 }
 
-pub struct Panel<'a> {
+#[derive(Debug, PartialEq, Eq)]
+pub struct Panel {
     central_port_position: Position,
-    wires: &'a [Wire],
+    wires: Vec<Wire>,
+}
+
+impl Panel {
+    fn get_intersection_points(&self) -> Vec<Position> {
+        let mut res: Vec<Position> = vec![];
+        let path1 = self.wires[0].path.clone();
+        let path2 = self.wires[1].path.clone();
+        for position in path1 {
+            if path2.contains(&position) && position != self.central_port_position {
+                res.push(position);
+            }
+        }
+        return res;
+    }
 }
 
 #[aoc_generator(day3)]
@@ -108,18 +139,142 @@ fn parse_input_day3(input: &str) -> Result<Panel, ParseIntError> {
         .collect();
 
     let mut wires = vec![];
-    let move1 = moves[0];
-    let move2 = moves[1];
+    let move1: Vec<Move> = moves[0].clone();
+    let move2: Vec<Move> = moves[1].clone();
     wires.push(Wire::from(move1));
     wires.push(Wire::from(move2));
 
-    return Ok(Panel {
+    let panel = Panel {
         central_port_position: Position { x: 0, y: 0 },
-        wires: &wires,
-    });
+        wires: wires,
+    };
+
+    return Ok(panel);
 }
 
 #[aoc(day3, part1)]
-pub fn part1(input: Panel) -> String {
-    return String::from("test");
+pub fn part1(panel: &Panel) -> i32 {
+    let intersection_points = panel.get_intersection_points();
+    let mut shortest_manhattan_distance: i32 = panel
+        .central_port_position
+        .manhattan_distance(intersection_points[0]);
+    for position in intersection_points {
+        let manhattan_distance = panel.central_port_position.manhattan_distance(position);
+        if shortest_manhattan_distance > manhattan_distance {
+            shortest_manhattan_distance = manhattan_distance;
+        }
+    }
+    return shortest_manhattan_distance;
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_manhattan_distance() {
+        let anchor = Position { x: 0, y: 0 };
+        let test = Position { x: 3, y: 3 };
+        assert_eq!(anchor.manhattan_distance(test), 6)
+    }
+
+    #[test]
+    fn test_move_from_string() {
+        let input = String::from("U78");
+        let expected = Move {
+            direction: Direction::Up,
+            length: 78,
+        };
+        let result = Move::from(input);
+        assert_eq!(result, expected);
+        let wrong = Move {
+            direction: Direction::Down,
+            length: 78,
+        };
+        assert_ne!(result, wrong);
+    }
+
+    #[test]
+    fn test_parse_input() {
+        let result = parse_input_day3("U2,R2,D1,L1\nR1");
+        let expected = Panel {
+            central_port_position: Position { x: 0, y: 0 },
+            wires: vec![
+                Wire {
+                    path: vec![
+                        Position { x: 0, y: 0 },
+                        Position { x: 0, y: 1 },
+                        Position { x: 0, y: 2 },
+                        Position { x: 1, y: 2 },
+                        Position { x: 2, y: 2 },
+                        Position { x: 2, y: 1 },
+                        Position { x: 1, y: 1 },
+                    ],
+                },
+                Wire {
+                    path: vec![Position { x: 0, y: 0 }, Position { x: 1, y: 0 }],
+                },
+            ],
+        };
+        let panel: Panel = result.unwrap();
+        assert_eq!(panel, expected);
+    }
+
+    #[test]
+    fn test_panel_get_intersection_points() {
+        let input = Panel {
+            central_port_position: Position { x: 0, y: 0 },
+            wires: vec![
+                Wire {
+                    path: vec![
+                        Position { x: 0, y: 0 },
+                        Position { x: 0, y: 1 },
+                        Position { x: 0, y: 2 },
+                    ],
+                },
+                Wire {
+                    path: vec![Position { x: 0, y: 0 }, Position { x: 0, y: 2 }],
+                },
+            ],
+        };
+        let expected = vec![Position { x: 0, y: 2 }];
+        assert_eq!(input.get_intersection_points(), expected);
+    }
+
+    #[test]
+    fn test_panel_get_intersection_points_with_example() {
+        let input = parse_input_day3("R8,U5,L5,D3\nU7,R6,D4,L4");
+        let panel = input.unwrap();
+        assert_eq!(
+            panel.get_intersection_points(),
+            vec![Position { x: 3, y: 3 }, Position { x: 6, y: 5 }]
+        );
+    }
+
+    #[test]
+    fn test_part1_example() {
+        let input = parse_input_day3("R8,U5,L5,D3\nU7,R6,D4,L4");
+        let panel = input.unwrap();
+        assert_eq!(part1(&panel), 6);
+    }
+
+    #[test]
+    fn test_part1_input1() {
+        let input = parse_input_day3(
+            "R75,D30,R83,U83,L12,D49,R71,U7,L72
+U62,R66,U55,R34,D71,R55,D58,R83",
+        );
+        let panel = input.unwrap();
+        assert_eq!(part1(&panel), 159);
+    }
+
+    #[test]
+    fn test_part1_input2() {
+        let input = parse_input_day3(
+            "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51\nU98,R91,D20,R16,D67,R40,U7,R15,U6,R7",
+        );
+        let panel = input.unwrap();
+        assert_eq!(part1(&panel), 135);
+    }
 }
