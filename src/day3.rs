@@ -29,8 +29,12 @@ struct Position {
 }
 
 impl Position {
-    fn manhattan_distance(&self, position: Position) -> i32 {
-        (position.x - self.x) + (position.y - self.y)
+    fn manhattan_distance(&self, position: Position) -> u32 {
+        let x1 = position.x.wrapping_abs() as u32;
+        let x2 = self.x.wrapping_abs() as u32;
+        let y1 = position.y.wrapping_abs() as u32;
+        let y2 = self.y.wrapping_abs() as u32;
+        (x1 + x2) + (y1 + y2)
     }
 }
 
@@ -153,13 +157,14 @@ fn parse_input_day3(input: &str) -> Result<Panel, ParseIntError> {
 }
 
 #[aoc(day3, part1)]
-pub fn part1(panel: &Panel) -> i32 {
+pub fn part1(panel: &Panel) -> u32 {
     let intersection_points = panel.get_intersection_points();
-    let mut shortest_manhattan_distance: i32 = panel
+    let mut shortest_manhattan_distance: u32 = panel
         .central_port_position
         .manhattan_distance(intersection_points[0]);
     for position in intersection_points {
         let manhattan_distance = panel.central_port_position.manhattan_distance(position);
+
         if shortest_manhattan_distance > manhattan_distance {
             shortest_manhattan_distance = manhattan_distance;
         }
@@ -246,10 +251,9 @@ mod tests {
     fn test_panel_get_intersection_points_with_example() {
         let input = parse_input_day3("R8,U5,L5,D3\nU7,R6,D4,L4");
         let panel = input.unwrap();
-        assert_eq!(
-            panel.get_intersection_points(),
-            vec![Position { x: 3, y: 3 }, Position { x: 6, y: 5 }]
-        );
+        let result = panel.get_intersection_points();
+        assert!(result.contains(&Position { x: 3, y: 3 }));
+        assert!(result.contains(&Position { x: 6, y: 5 }))
     }
 
     #[test]
@@ -261,10 +265,8 @@ mod tests {
 
     #[test]
     fn test_part1_input1() {
-        let input = parse_input_day3(
-            "R75,D30,R83,U83,L12,D49,R71,U7,L72
-U62,R66,U55,R34,D71,R55,D58,R83",
-        );
+        let input =
+            parse_input_day3("R75,D30,R83,U83,L12,D49,R71,U7,L72\nU62,R66,U55,R34,D71,R55,D58,R83");
         let panel = input.unwrap();
         assert_eq!(part1(&panel), 159);
     }
