@@ -19,9 +19,25 @@
 //How many different passwords within the range given in your puzzle input meet these criteria?
 //
 //Your puzzle input is 171309-643603.
+//
+//--- Part Two ---
+//
+//    An Elf just remembered one more important detail: the two adjacent matching digits are not part of a larger group of matching digits.
+//
+//    Given this additional criterion, but still ignoring the range rule, the following are now true:
+//
+//    112233 meets these criteria because the digits never decrease and all repeated digits are exactly two digits long.
+//    123444 no longer meets the criteria (the repeated 44 is part of a larger group of 444).
+//    111122 meets the criteria (even though 1 is repeated more than twice, it still contains a double 22).
+//
+//    How many different passwords within the range given in your puzzle input meet all of the criteria?
+//
+//    Your puzzle input is still 171309-643603.
 
 use aoc_runner_derive::{aoc, aoc_generator};
 use std::num::ParseIntError;
+use std::collections::HashMap;
+
 
 fn is_6_digit_number(input: &str) -> bool {
     input.len() == 6 && input.parse::<i32>().is_ok()
@@ -61,6 +77,31 @@ fn is_possible_password(input: &str) -> bool {
     return is_6_digit_number(input) && is_two_adjacent_digit_the_same(input) && are_digits_ordered(input)
 }
 
+fn two_adjacent_matching_digits_not_part_larger_group(input: &str) -> bool {
+    let mut occurence_found = 1;
+    let mut chars = input.chars();
+    let mut occurences_found: HashMap<char, u32> = HashMap::new();
+    let mut previous_char = chars.next().unwrap() ;
+    for char in chars {
+        if char == previous_char {
+            occurence_found += 1;
+        } else {
+            occurences_found.insert(previous_char, occurence_found);
+            occurence_found = 1;
+        }
+        previous_char = char;
+    }
+    occurences_found.insert(previous_char, occurence_found);
+
+    let mut res =  false;
+    for (_, occurences) in occurences_found {
+        if occurences == 2 {
+            res = true;
+        }
+    }
+    return res;
+}
+
 #[aoc_generator(day4)]
 fn parse_input_day4(input: &str) -> Result<Vec<String>, ParseIntError> {
     let range: Vec<String> = input.split("-").map(|input| String::from(input)).collect();
@@ -81,6 +122,17 @@ pub fn part1(inputs: &[String]) -> u32 {
     let mut res: u32 = 0;
     for input in inputs {
         if is_possible_password(&input) {
+            res += 1;
+        }
+    }
+    return res;
+}
+
+#[aoc(day4, part2)]
+pub fn part2(inputs: &[String]) -> u32 {
+    let mut res: u32 = 0;
+    for input in inputs {
+        if is_possible_password(&input) && two_adjacent_matching_digits_not_part_larger_group(input) {
             res += 1;
         }
     }
@@ -157,5 +209,12 @@ mod tests {
         assert_eq!(part1(&vec![String::from("111111")]), 1);
         assert_eq!(part1(&vec![String::from("111111"), String::from("121110")]), 1);
         assert_eq!(part1(&vec![String::from("121110"), String::from("111111")]), 1);
+    }
+
+    #[test]
+    fn part_of_bigger_group(){
+        assert_eq!(two_adjacent_matching_digits_not_part_larger_group("112233"), true);
+        assert_eq!(two_adjacent_matching_digits_not_part_larger_group("123444"), false);
+        assert_eq!(two_adjacent_matching_digits_not_part_larger_group("111122"), true);
     }
 }
