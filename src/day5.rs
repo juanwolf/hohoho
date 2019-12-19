@@ -47,8 +47,51 @@ fn output(instructions: Vec<i32>, args: Vec<i32>) -> Vec<i32> {
     instructions
 }
 
-fn halt(instructions: Vec<i32>, _inputs: Vec<i32>) -> Vec<i32> {
+fn halt(instructions: Vec<i32>, _args: Vec<i32>) -> Vec<i32> {
     instructions
+}
+
+fn jump_if_true(args: Vec<i32>, position: usize) -> usize {
+    let input1 = args[0];
+    let input2 = args[1];
+    if input1 != 0 {
+       return input2 as usize
+    }
+    position
+}
+
+fn jump_if_false(args: Vec<i32>, position: usize) -> usize {
+    let input1 = args[0];
+    let input2 = args[1];
+    if input1 == 0 {
+        return input2 as usize
+    }
+    position
+}
+
+fn equals(mut instructions: Vec<i32>, args: Vec<i32>) -> Vec<i32> {
+    let input1 = args[0];
+    let input2 = args[1];
+    let input3 = args[2];
+    if input1 == input2 {
+        instructions[input3 as usize] = 1
+    } else {
+        instructions[input3 as usize ] = 0
+    }
+    instructions
+}
+
+fn less_than(mut instructions: Vec<i32>, args: Vec<i32>) -> Vec<i32> {
+    let input1 = args[0];
+    let input2 = args[1];
+    let input3 = args[2];
+    if input1 < input2 {
+        instructions[input3 as usize] = 1
+    } else  {
+        instructions[input3 as usize] = 0
+    }
+    instructions
+
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -57,6 +100,10 @@ enum Operation {
     Mul,
     Ins,
     Out,
+    JumpIfTrue,
+    JumpIfFalse,
+    LessThan,
+    Equals,
     Halt,
 }
 
@@ -67,6 +114,10 @@ impl From<i32> for Operation {
             2 => Operation::Mul,
             3 => Operation::Ins,
             4 => Operation::Out,
+            5 => Operation::JumpIfTrue,
+            6 => Operation::JumpIfFalse,
+            7 => Operation::LessThan,
+            8 => Operation::Equals,
             99 => Operation::Halt,
             _ => panic!("Operation not known!"),
         }
@@ -81,6 +132,10 @@ impl Operation {
             Operation::Ins => INS_ARGS_EXPECTED,
             Operation::Out => OUTPUT_ARGS_EXPECTED,
             Operation::Halt => HALT_ARGS_EXPECTED,
+            Operation::JumpIfTrue => 2,
+            Operation::JumpIfFalse => 2,
+            Operation::LessThan => 3,
+            Operation::Equals => 3
         }
     }
 
@@ -90,15 +145,29 @@ impl Operation {
             Operation::Mul => mul(inputs, instructions),
             Operation::Ins => ins(inputs, instructions),
             Operation::Out => output(inputs, instructions),
-            Operation::Halt => halt(inputs, instructions)
+            Operation::Halt => halt(inputs, instructions),
+            Operation::LessThan => less_than(inputs, instructions),
+            Operation::Equals => equals(inputs, instructions),
+            _ => panic!("Can't apply for jump commands"),
         }
     }
+
+    fn jump(&self, instructions: Vec<i32>, position: usize) -> usize {
+        match self {
+            Operation::JumpIfFalse => jump_if_false(instructions, position),
+            Operation::JumpIfTrue => jump_if_true(instructions, position),
+            _ => panic!("Can't jump for operation {:?}", self)
+        }
+    }
+
 
     fn is_write_parameter(&self, parameter_position: usize) -> bool {
         match (self, parameter_position) {
             (Operation::Add, 2) => true,
             (Operation::Mul, 2) => true,
             (Operation::Ins, 0) => true,
+            (Operation::LessThan, 2) => true,
+            (Operation::Equals, 2) => true,
             _ => false,
         }
     }
@@ -133,7 +202,7 @@ fn parse_input(input: &str) -> Result<Vec<i32>, ParseIntError> {
     input.split(",").map(|i| i32::from_str(i)).collect()
 }
 
-fn intcode_program(mut input: Vec<i32>, _noun: i32, _verb: i32) -> Vec<i32> {
+fn intcode_program(mut input: Vec<i32>) -> Vec<i32> {
     //input[1] = noun;
     //input[2] = verb;
     let mut line_start_index: usize = 0;
@@ -145,6 +214,9 @@ fn intcode_program(mut input: Vec<i32>, _noun: i32, _verb: i32) -> Vec<i32> {
             Operation::Halt => {
                 return input;
             },
+            Operation::JumpIfFalse | Operation::JumpIfTrue => {
+                line_start_index = operation.jump(instruction_parameters, line_start_index);
+            }
             _ => {
                 input = operation.apply(input, instruction_parameters);
             }
@@ -156,7 +228,14 @@ fn intcode_program(mut input: Vec<i32>, _noun: i32, _verb: i32) -> Vec<i32> {
 #[aoc(day5, part1)]
 pub fn part1(input: &[i32]) -> String {
     let mut result: Vec<i32> = Vec::from(input);
-    result = intcode_program(result, 1, 1);
+    result = intcode_program(result);
+    return format!("{:?}", result);
+}
+
+#[aoc(day5, part2)]
+pub fn part2(input: &[i32]) -> String {
+    let mut result: Vec<i32> = Vec::from(input);
+    result = intcode_program(result);
     return format!("{:?}", result);
 }
 
@@ -194,9 +273,9 @@ mod tests {
 
     #[test]
     fn test_intcode_program() {
-        assert_eq!(intcode_program(vec![1,0,0,0,99], 0, 0), vec![2, 0, 0, 0, 99]);
-        assert_eq!(intcode_program(vec![2,3,0,3,99 ],3,0), vec![2, 3, 0, 6, 99]);
-        assert_eq!(intcode_program(vec![2,4,4,5,99,0 ], 4, 4), vec![2, 4, 4, 5, 99, 9801]);
-        assert_eq!(intcode_program(vec![1,1,1,4,99,5,6,0,99 ], 1, 1), vec![30, 1, 1, 4, 2, 5, 6, 0, 99]);
+        assert_eq!(intcode_program(vec![1,0,0,0,99]), vec![2, 0, 0, 0, 99]);
+        assert_eq!(intcode_program(vec![2,3,0,3,99 ]), vec![2, 3, 0, 6, 99]);
+        assert_eq!(intcode_program(vec![2,4,4,5,99,0 ]), vec![2, 4, 4, 5, 99, 9801]);
+        assert_eq!(intcode_program(vec![1,1,1,4,99,5,6,0,99 ]), vec![30, 1, 1, 4, 2, 5, 6, 0, 99]);
     }
 }
